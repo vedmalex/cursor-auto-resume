@@ -5,15 +5,27 @@
 
 A simple tool that automatically clicks the "resume the conversation" link when Cursor IDE hits its API rate limits.
 
+## Important Note on Usage
+
+This tool is created with the intention of helping developers maintain their workflow efficiency while using Cursor IDE. It is designed to automate a manual action that Cursor explicitly allows (clicking the "resume conversation" link) and does not attempt to bypass or circumvent any actual rate limits or security measures.
+
+We respect Cursor's services and their need for rate limiting. This tool:
+- Only automates an action that users are explicitly allowed to perform
+- Maintains the same cooldown periods as manual clicking
+- Does not attempt to bypass actual API limits or quotas
+- Simply reduces the manual interruption of having to click the resume link
+
+The goal is to enhance developer productivity while working within Cursor's intended usage patterns.
+
 ## Why This Tool Exists
 
-When using Cursor's AI features extensively, you often hit rate limits after about 25 tool calls. Normally, you'd see a message like this:
+When using Cursor's AI features extensively during development, you often hit rate limits after about 25 tool calls. Normally, you'd see a message like this:
 
 ```
 Note: we default stop the agent after 25 tool calls. You can resume the conversation.
 ```
 
-This tool automatically detects this message and clicks the "resume the conversation" link for you, so you can keep working without interruption.
+This tool automatically detects this message and clicks the "resume the conversation" link for you, allowing you to maintain focus on your development tasks without manual interruption.
 
 ## Features
 
@@ -41,16 +53,16 @@ The script:
 ## FAQ
 
 ### Is this safe to use?
-Yes, the script only runs in your Cursor IDE and only clicks the specific "resume the conversation" link when rate limits are hit.
+Yes, the script only runs in your Cursor IDE and only clicks the specific "resume the conversation" link when rate limits are hit. It doesn't modify any core functionality or bypass any security measures.
 
 ### Will this work with future versions of Cursor?
-As long as Cursor continues to use similar rate limit messages and "resume the conversation" links, the script should continue to work.
+As long as Cursor continues to use similar rate limit messages and "resume the conversation" links, the script should continue to work. If Cursor's interface changes, we'll update the tool to maintain compatibility while respecting their service.
 
 ### How do I disable it?
 Close and reopen Cursor IDE, or refresh the window.
 
 ### Does this bypass Cursor's rate limits?
-No, it simply automates clicking the "resume the conversation" link that Cursor provides when you hit a rate limit.
+No. This tool only automates clicking the "resume the conversation" link that Cursor explicitly provides. It respects all cooldown periods and doesn't bypass any actual API limits. It simply automates an action that users are already permitted to perform manually.
 
 ## License
 
@@ -58,7 +70,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a pull request.
+Contributions are welcome! Please feel free to submit a pull request. When contributing, please maintain the tool's core principle of respecting Cursor's service while helping developers be more productive.
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
