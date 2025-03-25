@@ -1,0 +1,10 @@
+This is a placeholder for the demo screenshot image.
+
+To add a proper screenshot:
+
+1. Run the Cursor Auto Resume script
+2. Take a screenshot showing the tool in action (with the indicator visible)
+3. Name it "cursor-auto-resume-demo.png"
+4. Replace this file with the screenshot
+
+The screenshot will be displayed in the README.md file. 
