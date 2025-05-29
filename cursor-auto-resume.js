@@ -5,10 +5,31 @@
     // Track last click time to avoid multiple clicks
     let lastClickTime = 0;
     
+    // Timer variables
+    let startTime = Date.now();
+    const maxDuration = 30 * 60 * 1000; // 30 minutes in milliseconds
+    let intervalId;
+    
+    // Function to reset the timer
+    function click_reset() {
+        startTime = Date.now();
+        console.log('Cursor Auto Resume: Timer reset');
+    }
+    
+    // Make click_reset available globally
+    window.click_reset = click_reset;
+    
     // Main function that looks for and clicks the resume link
     function clickResumeLink() {
-        // Prevent clicking too frequently (3 second cooldown)
+        // Check if 30 minutes have passed
         const now = Date.now();
+        if (now - startTime > maxDuration) {
+            console.log('Cursor Auto Resume: 30 minutes elapsed, stopping auto-click');
+            clearInterval(intervalId);
+            return;
+        }
+        
+        // Prevent clicking too frequently (3 second cooldown)
         if (now - lastClickTime < 3000) return;
         
         // Find elements with rate limit text
@@ -35,9 +56,12 @@
     }
     
     // Run periodically
-    setInterval(clickResumeLink, 1000);
+    intervalId = setInterval(clickResumeLink, 1000);
     
     // Also run once immediately
     clickResumeLink();
+    
+    // Log timer info
+    console.log('Cursor Auto Resume: Will stop after 30 minutes. Call click_reset() to reset timer.');
     
 })(); 
