@@ -34,6 +34,26 @@ This tool automatically detects this message and clicks the "resume the conversa
 
 ## How to Use
 
+Permanent installation:
+
+1. Install [Custom CSS and JS Loader](https://marketplace.visualstudio.com/items?itemName=be5invis.vscode-custom-css)
+2. Clone this repo to your home directory
+3. Add this to your `settings.json`:
+
+```
+"vscode_custom_css.imports": [
+    "file://${userHome}/cursor-auto-resume/cursor-auto-resume.js"
+]
+```
+
+4. Restart Cursor with proper permissions to modify itself (your user should own it)
+5. Activate command "Reload Custom CSS and JS"
+6. Reload window
+
+Step 5 + 6 must be repeated on each Cursor update.
+
+One time installation:
+
 1. In Cursor, click "Help" in the menu bar and select "Toggle Developer Tools"
 2. Click the "Console" tab
 3. Copy the entire code from [cursor-auto-resume.js](cursor-auto-resume.js)
