@@ -1,0 +1,34 @@
+<div tabindex="-1"
+  class="border-[var(--vscode-dropdown-border)] border border-solid absolute -left-px -right-px z-[11] p-0.5 rounded-lg shadow-md fade-in-fast bottom-full mb-1  composer-warning-popup "
+  style="box-shadow: 0 0 8px 2px color-mix(in srgb, var(--vscode-widget-shadow) 80%, transparent); background-color: color-mix(in srgb, var(--vscode-dropdown-background) 97%, var(--vscode-terminal-ansiWhite)); outline: none;">
+  <div class="px-2 py-1.5 flex gap-1.5">
+    <div class="codicon codicon-warning-two text-[var(--vscode-editorWarning-foreground)]"
+      style="padding-top: 0px; font-size: 13px; opacity: 0.8; flex-shrink: 0; width: 16px; height: 14px; display: flex; justify-content: center; align-items: center;">
+    </div>
+    <div class="text-[11px] select-text [color:var(--vscode-foreground)] flex-1 min-w-0 composer-error-body">
+      <div class="flex gap-1 items-start">
+        <div class="composer-error-message" style="opacity: 1;">We're having trouble connecting to the model provider.
+          This might be temporary - please try again in a moment.</div>
+        <div
+          class="anysphere-icon-button bg-[transparent] border-none text-foreground flex w-3 items-center justify-center h-[14px] w-[16px] p-0 ml-auto ">
+          <span class="codicon codicon-x-two  !text-[15px] "></span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="p-1 flex gap-1 items-center justify-end pt-0">
+    <div id="composer-warning-popup-more-menu"
+      class="flex flex-nowrap items-center justify-center gap-1 px-[6px] rounded cursor-pointer whitespace-nowrap shrink-0 anysphere-text-button   h-fit codicon codicon-ellipsis-two !px-0"
+      style="font-size: 11px; line-height: 16px; flex-shrink: 1; min-width: 0px; text-align: left; order: -10; flex-grow: 1;">
+      <span style="overflow: hidden; text-overflow: ellipsis; min-width: 0px; flex: 1 1 0%;"></span>
+    </div>
+    <div
+      class="flex flex-nowrap items-center justify-center gap-1 px-[6px] rounded cursor-pointer whitespace-nowrap shrink-0 anysphere-text-button   h-fit undefined"
+      style="font-size: 11px; line-height: 16px; flex-shrink: 1; min-width: 0px;"><span
+        style="overflow: hidden; text-overflow: ellipsis; min-width: 0px; flex: 1 1 0%;">Copy Request Info</span></div>
+    <div
+      class="flex flex-nowrap items-center justify-center gap-1 px-[6px] rounded cursor-pointer whitespace-nowrap shrink-0 anysphere-secondary-button   h-fit undefined"
+      style="font-size: 11px; line-height: 16px; flex-shrink: 1; min-width: 0px;"><span
+        style="overflow: hidden; text-overflow: ellipsis; min-width: 0px; flex: 1 1 0%;">Try again</span></div>
+  </div>
+</div>

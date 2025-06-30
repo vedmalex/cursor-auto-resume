@@ -1,0 +1,450 @@
+---
+description: Apply this rule when creating, editing, or validating .mdc rule files to ensure proper structure, effective descriptions, and compliance with Cursor rule standards for Memory Bank system.
+globs: ["custom_modes/**/*.md", "**/*.mdc"]
+alwaysApply: false
+---
+# Cursor Rules Validation Guidelines
+
+> **TL;DR:** Это правило определяет обязательные критерии валидации для .mdc файлов правил Cursor, обеспечивая их структурную корректность, эффективность описаний и соответствие стандартам Memory Bank системы для оптимального управления поведением ИИ.
+
+## ⚠️ MANDATORY RULE: FETCH ALL RELEVANT RULES FIRST ⚠️
+
+**CRITICAL REQUIREMENT**: При работе с .mdc файлами правил Cursor ОБЯЗАТЕЛЬНО загрузите все необходимые правила валидации:
+
+```markdown
+The agent will load critical rules and guidelines using the @<filename> syntax.
+This includes: @isolation_rules/main-optimized, @agent-instruction-creation-validation, @rule-description-guidelines, and @writing-effective-clinerules.
+Additional specific rules will be loaded as needed for rule management.
+```
+
+## 1. VALIDATION WORKFLOW FOR CURSOR RULES
+
+```mermaid
+graph TD
+    Start["🚀 Cursor Rules Validation Start"] --> LoadRules["📚 Load Validation Rules"]
+    LoadRules --> FileCheck{"File exists?"}
+
+    FileCheck -->|"No"| CreateNew["📝 Create New Rule"]
+    FileCheck -->|"Yes"| ValidateExisting["🔍 Validate Existing Rule"]
+
+    CreateNew --> GatherRequirements["📋 Gather Requirements"]
+    ValidateExisting --> ParseFrontmatter["📄 Parse Front-Matter"]
+
+    GatherRequirements --> PromptBasicInfo["💬 Prompt for Basic Info"]
+    ParseFrontmatter --> ValidateFrontmatter["✅ Validate Front-Matter"]
+
+    PromptBasicInfo --> PromptContent["💬 Prompt for Content"]
+    ValidateFrontmatter --> CheckLoadingAndAliases["🔄 Check Rule Loading & Aliases"]
+
+    CheckLoadingAndAliases --> ValidateStructure["🏗️ Validate Structure"]
+
+    ValidateStructure --> ValidateContent["📝 Validate Content"]
+    PromptContent --> AssembleRule["⚙️ Assemble Rule"]
+
+    AssembleRule --> ValidateNew["✅ Validate New Rule"]
+    ValidateContent --> ValidateSuccessCriteria["🎯 Validate Success Criteria"]
+    ValidateSuccessCriteria --> ValidateExamples["📚 Validate Examples"]
+
+    ValidateNew --> NewRuleReport["📊 New Rule Report"]
+    ValidateExamples --> ValidateMetadata["🏷️ Validate Metadata"]
+
+    NewRuleReport --> CheckNewIssues{"Issues found?"}
+    ValidateMetadata --> GenerateReport["📊 Generate Validation Report"]
+
+    CheckNewIssues -->|"Yes"| ProvideNewFeedback["🔄 Provide Feedback"]
+    CheckNewIssues -->|"No"| ProposeCreation["🎯 Propose File Creation"]
+
+    GenerateReport --> CheckIssues{"Issues found?"}
+
+    CheckIssues -->|"Yes"| ProvideFeedback["🔄 Provide Improvement Feedback"]
+    CheckIssues -->|"No"| ValidationComplete["✅ Validation Complete"]
+
+    ProvideNewFeedback --> PromptContent
+    ProvideFeedback --> ValidateExisting
+    ProposeCreation --> End["🏁 Validation End"]
+    ValidationComplete --> End
+
+    style Start fill:#4da6ff,stroke:#0066cc,color:white
+    style FileCheck fill:#ffa64d,stroke:#cc7a30,color:white
+    style CreateNew fill:#4dbb5f,stroke:#36873f,color:white
+    style ValidateExisting fill:#d94dbb,stroke:#a3378a,color:white
+    style End fill:#4da6ff,stroke:#0066cc,color:white
+    style CheckLoadingAndAliases fill:#8b5fec,stroke:#5c3ca6,color:white
+    style ValidateSuccessCriteria fill:#ffcc99,stroke:#ff9900,color:white
+```
+
+## 2. FRONT-MATTER VALIDATION CRITERIA
+
+### 2.1. Required Front-Matter Structure
+```yaml
+---
+description: [Clear explanation of what this rule is for]
+author: [Your Name/Handle]
+version: [1.0]
+globs: [Array of file patterns - optional but recommended]
+tags: [Array of categorization tags - optional]
+---
+```
+
+### 2.2. Front-Matter Validation Checklist
+- ✅ **Presence**: Front-matter exists at file beginning
+- ✅ **Format**: Valid YAML syntax with `---` delimiters
+- ✅ **Required Fields**:
+  - `description`: MANDATORY - Non-empty, clear, concise, in English, and defines activation conditions
+  - `author`: Identification of rule creator
+  - `version`: Version number (semantic versioning preferred)
+  - `alwaysApply`: MANDATORY - Must be boolean (true/false)
+- ✅ **Optional Fields**:
+  - `globs`: File patterns for rule relevance
+  - `tags`: Categorization for rule management
+- ✅ **Data Types**: Correct YAML data types for all fields
+
+## 3. CONTENT STRUCTURE VALIDATION
+
+### 3.0. RULE LOADING OPTIMIZATION AND ALIASING
+
+**CRITICAL REQUIREMENT**: Агент ДОЛЖЕН проверять состояние списка загружаемых правил и файлов на разных стадиях работы и убеждаться в том, что одно и то же правило/файл не загружается несколько раз в контекст.
+
+**Принципы оптимизации загрузки:**
+- **Однократная загрузка**: Правило/файл должно быть загружено в контекст только один раз.
+- **Приоритет загрузки**: Если правило/файл используется несколько раз, его необходимо "поднять вверх" в списке загрузки, как важное.
+- **Алиасирование**: Для часто используемых или "поднятых" правил/файлов необходимо создать уникальный алиас.
+  - **Формат алиаса**: Алиас должен быть назван заглавными буквами и не содержать спецсимволов (например, `CORE_RULES`, `GIT_WORKFLOW_CONTROLLER`).
+  - **Уникальность**: Алиас должен быть гарантированно уникальным во всем файле.
+  - **Использование**: В местах предыдущего упоминания правила/файла (по полному пути `@<filename>`) необходимо ссылаться на него по его алиасу (`@<ALIAS_NAME>`).
+
+**Процесс:**
+```mermaid
+graph TD
+    StartCheck["🔄 Начать проверку загрузки правил"] --> CheckCache{"Правило уже в кэше?"}
+    CheckCache -->|"Да"| UseCached["✅ Использовать закэшированное правило"]
+    CheckCache -->|"Нет"| LoadRule["📚 Загрузить правило"]
+    LoadRule --> IdentifyUsage{"Используется несколько раз?"}
+    IdentifyUsage -->|"Да"| PromoteToAlias["⬆️ Повысить до алиаса"]
+    PromoteToAlias --> CreateAlias["📝 Создать уникальный алиас"]
+    CreateAlias --> UpdateReferences["🔄 Обновить ссылки на алиас"]
+    UpdateReferences --> AddToCache["➕ Добавить в кэш с алиасом"]
+    IdentifyUsage -->|"Нет"| AddToCache["➕ Добавить в кэш"]
+    AddToCache --> EndCheck["🏁 Завершить проверку"]
+
+    style StartCheck fill:#8b5fec,stroke:#5c3ca6,color:white
+    style CheckCache fill:#ffa64d,stroke:#cc7a30,color:white
+    style UseCached fill:#4dbb5f,stroke:#36873f,color:white
+    style LoadRule fill:#d94dbb,stroke:#a3378a,color:white
+    style IdentifyUsage fill:#4dbbbb,stroke:#368787,color:white
+    style PromoteToAlias fill:#e699d9,stroke:#d94dbb,color:white
+    style CreateAlias fill:#d971ff,stroke:#a33bc2,color:white
+    style UpdateReferences fill:#ff71c2,stroke:#c23b8a,color:white
+    style AddToCache fill:#a0c0f0,stroke:#7090c0,color:black
+    style EndCheck fill:#4da6ff,stroke:#0066cc,color:white
+```
+
+### 3.1. Mandatory Sections for Cursor Rules
+
+```mermaid
+graph TD
+    CursorRule["Cursor Rule File"] --> Title["# Rule Title"]
+    CursorRule --> Objective["## Objective/Purpose"]
+    CursorRule --> Structure["## Structured Content"]
+
+    Structure --> Headings["### Proper Headings"]
+    Structure --> Lists["### Lists & Bullets"]
+    Structure --> CodeBlocks["### Code Examples"]
+    Structure --> Emphasis["### Text Emphasis"]
+    Structure --> RuleLoadingAliasValidation["### Rule Loading and Alias Validation"]
+
+    RuleLoadingAliasValidation --> RuleType["## Rule Type Specific Content"]
+
+    RuleType --> Informational["### Informational Rules"]
+    RuleType --> Process["### Process/Workflow Rules"]
+    RuleType --> Behavioral["### Behavioral/Instructional Rules"]
+    RuleType --> Meta["### Meta-Rules"]
+    RuleType --> ModeSpecific["### Mode-Specific Rules"]
+    RuleType --> MemoryBank["### Memory Bank Rules"]
+
+    CursorRule --> Examples["## Examples & Patterns"]
+    CursorRule --> Validation["## Validation Steps"]
+
+    style Title fill:#4da6ff,stroke:#0066cc,color:white
+    style Objective fill:#ffa64d,stroke:#cc7a30,color:white
+    style Structure fill:#4dbb5f,stroke:#36873f,color:white
+    style RuleLoadingAliasValidation fill:#8b5fec,stroke:#5c3ca6,color:white
+    style RuleType fill:#d94dbb,stroke:#a3378a,color:white
+    style Examples fill:#4dbbbb,stroke:#368787,color:white
+    style Validation fill:#bb4d4d,stroke:#873636,color:white
+```
+
+### 3.2. Content Validation Criteria
+
+#### Clear Objective
+- ✅ **Well-defined purpose** stated at beginning
+- ✅ **Reinforced in content** throughout the rule
+- ✅ **Specific scope** clearly defined
+
+#### Success Criteria Definition
+- ✅ **Step-by-Step Success Criteria**: Each step in any workflow or process MUST have clearly defined and verifiable success criteria
+- ✅ **Measurable Outcomes**: Success criteria must be quantifiable or clearly verifiable with specific completion indicators
+- ✅ **Clarity and Precision**: Criteria must be unambiguous and leave no room for interpretation
+- ✅ **Completeness Coverage**: All aspects of step completion must be addressed in the success criteria
+- ✅ **Validation Methods**: Clear methods for verifying criteria fulfillment must be specified
+- ✅ **Insufficient Criteria Handling**: When success criteria are not sufficiently precise, the agent MUST ask clarifying questions and propose additional details to make them unambiguous
+
+#### Structured Content
+- ✅ **Logical organization** using proper Markdown headings
+- ✅ **Effective lists** for steps, criteria, key points
+- ✅ **Code blocks** with language specification for syntax highlighting
+- ✅ **Proper emphasis** using **bold** and *italics*
+- ✅ **Rule Loading and Alias Validation**: All rule and file references MUST use the `@<filename>` syntax or `@<ALIAS_NAME>` syntax. The system will automatically resolve paths and aliases, ensuring existence and proper loading. Aliases MUST follow the specified naming convention and be unique.
+
+#### Clarity and Precision
+- ✅ **Unambiguous language** throughout
+- ✅ **Jargon explained** or avoided
+- ✅ **Precise instructions** for AI behavior guidance
+
+#### Modularity
+- ✅ **Single focus** per rule
+- ✅ **Manageable scope** for understanding and updates
+- ✅ **Clear boundaries** with other rules
+
+### 3.3. Modularity and Size Criteria
+- ✅ **Rule Size Recommendation**: For optimal readability and maintainability, it is recommended that the content of a rule (excluding front-matter) does not exceed **200 lines**.
+- ✅ **Large Rule Identification**: Rules with content exceeding 200 lines are considered 'large' and should be reviewed for potential refactoring and splitting into multiple, more focused rules.
+- ✅ **Splitting Capability Reference**: The process for detecting and splitting multi-rule content is managed by the `Rules Manager Mode` (refer to `@custom_modes/agents/rules-manager-instructions.mdc.md` for details on `Step 2.3.5: Multi-Rule Content Detection and Splitting`).
+
+## 4. DESCRIPTION AND TL;DR QUALITY CHECKS
+
+### 4.1. Description Field Validation
+- ✅ **Clarity and Conciseness**: Description is clear, concise, and easy for AI to understand.
+- ✅ **Contextual Relevance**: Explicitly states scenarios, modes, file types, or project phases where the rule is applicable.
+- ✅ **Actionability**: Provides enough information for AI to make an informed decision about applying the rule.
+- ✅ **Language**: Description is written in English.
+- ✅ **Presence**: Description is present and not empty.
+- ✅ **Specificity**: Clearly defines activation conditions or scope.
+- ✅ **Ambiguity**: Avoids ambiguity and uses straightforward language.
+- ✅ **Relevance**: Helps AI determine if the rule is relevant to current user query or task context.
+
+### 4.2. TL;DR Section Validation
+- ✅ **Presence**: TL;DR section exists directly after front-matter.
+- ✅ **Conciseness**: Brief, typically 1-2 sentences.
+- ✅ **Core Purpose**: Clearly states what the rule does, why it exists, and its primary impact.
+- ✅ **Readability**: Uses simple language, easy to grasp essence of the rule.
+- ✅ **Location**: Placed at the very top of the rule's markdown content, usually as a blockquote.
+
+## 5. RULE TYPE SPECIFIC VALIDATION
+
+### 5.1. Informational/Documentation Rules
+**Validation Criteria:**
+- ✅ **Comprehensive overview** of system/technology
+- ✅ **Detailed explanations** of components/concepts
+- ✅ **Visual diagrams** (Mermaid.js recommended)
+- ✅ **Code snippets** and configuration examples
+- ✅ **Key terms definitions**
+
+### 5.2. Process/Workflow Rules
+**Validation Criteria:**
+- ✅ **Clear start and end points**
+- ✅ **Numbered sequential steps**
+- ✅ **Decision points** with clear options
+- ✅ **Tool specifications** for each step
+- ✅ **Input/output expectations**
+- ✅ **Dependencies and prerequisites**
+
+### 5.3. Behavioral/Instructional Rules (AI Guidance)
+**Validation Criteria:**
+- ✅ **Explicit instructions** using imperative verbs (MUST, SHOULD, NEVER)
+- ✅ **Critical warnings** with proper formatting (🚨, ⚠️, ✅, ❌)
+- ✅ **Positive and negative examples**
+- ✅ **Triggers and conditions** for rule activation
+- ✅ **Verification steps** or thinking blocks
+- ✅ **Context management** instructions
+
+### 5.4. Meta-Rules
+**Validation Criteria:**
+- ✅ **Meta-process triggers** clearly defined
+- ✅ **Meta-process steps** detailed
+- ✅ **User interaction points** specified
+
+### 5.5. Mode-Specific Rules (Memory Bank System)
+**Validation Criteria:**
+- ✅ **Mode identification** clearly specified (VAN, PLAN, CREATIVE, IMPLEMENT, REFLECT, ARCHIVE)
+- ✅ **Phase transitions** properly defined
+- ✅ **Context management** instructions included
+- ✅ **Task integration** with `tasks.md` specified
+- ✅ **Verification commitments** present
+
+### 5.6. Memory Bank Integration Rules
+**Validation Criteria:**
+- ✅ **File path standards** compliance (`memory-bank/` structure)
+- ✅ **Date format** adherence (YYYY-MM-DD)
+- ✅ **Task tracking** integration
+- ✅ **Context preservation** mechanisms
+- ✅ **Artifact creation** requirements
+
+## 6. LANGUAGE AND FORMATTING VALIDATION
+
+### 6.1. AI Guidance Language Standards
+**Directive Language:**
+- ✅ **MUST** for absolute requirements
+- ✅ **SHOULD** for strong recommendations
+- ✅ **MAY** for optional actions
+- ✅ **MUST NOT/NEVER** for absolute prohibitions
+- ✅ **SHOULD NOT** for strong discouragement
+
+**Critical Information Highlighting:**
+- ✅ **Emoji usage** for attention (🚨, ⚠️, ✅, ❌)
+- ✅ **ALL CAPS** for critical sections
+- ✅ **Bold formatting** for important terms
+- ✅ **Code blocks** for exact patterns
+
+**Concrete Examples:**
+- ✅ **Exact code snippets** provided
+- ✅ **Command examples** with parameters
+- ✅ **Output format** specifications
+- ✅ **Desired vs undesired patterns** clearly distinguished
+
+## 7. CONTENT QUALITY VALIDATION
+
+### 7.1. Best Practices Checklist
+- ✅ **Broad to narrow** structure (overview → specifics)
+- ✅ **Analogies/scenarios** for complex concepts
+- ✅ **Terminology definitions** for specific terms
+- ✅ **Anticipated questions** addressed proactively
+- ✅ **Update considerations** for maintenance
+
+### 7.2. Technical Compliance
+- ✅ **File naming** follows kebab-case convention
+- ✅ **Reference Syntax**: All internal rule and file references MUST exclusively use the `@<filename>` syntax or `@<ALIAS_NAME>` syntax. Any use of `fetch_rule` or `read_file` syntax is considered invalid and requires transformation.
+- ✅ **Path Existence Verification**: The existence of the file or rule referenced by `@<filename>` or `@<ALIAS_NAME>` (or resulting from `fetch_rule`/`read_file` transformation) MUST be verified using the agent's internal file system tools (e.g., `file_search`, `read_file` with error handling for non-existence).
+- ✅ **Relative Paths for Rules**: For `.mdc` rule files, the path in `@<filename>` MUST be relative to `_cursor/rules/` and MUST NOT contain `_cursor/rules/`.
+- ✅ **Relative Paths for Other Files**: For non-`.mdc` files, the path in `@<filename>` MAY be relative to the project root.
+- ✅ **Cross-references** to other rules are accurate
+- ✅ **Markdown syntax** is valid and renders correctly
+- ✅ **Code examples** are syntactically correct
+- ✅ **Links and references** are functional
+- ✅ **Alias Validation**: All defined aliases MUST be in uppercase, contain no special characters, and be unique within the entire rule file. All references using aliases MUST correctly point to a defined alias.
+- ✅ **Duplicate Loading Prevention**: The rule MUST include mechanisms to detect and prevent the duplicate loading of the same rule or file into the context, promoting frequently used rules to aliases as needed.
+
+## 8. VALIDATION REPORT TEMPLATE
+
+### 8.1. Validation Report Structure
+```markdown
+# Cursor Rule Validation Report: [filename]
+
+## Executive Summary
+- **Rule Type**: [.mdc/.mdc.md/mode-specific/memory-bank]
+- **Status**: [PASS/FAIL/NEEDS_IMPROVEMENT]
+- **Critical Issues**: [Count]
+- **Recommendations**: [Count]
+- **Compliance Score**: [X/10]
+- **Memory Bank Integration**: [✅/❌]
+
+## Front-Matter Analysis
+- [✅/❌] YAML syntax valid
+- [✅/❌] Required fields present (`description`, `alwaysApply`)
+- [✅/❌] Description quality adequate
+- [✅/❌] Metadata completeness
+- [✅/❌] Globs patterns valid
+
+## Content Structure Analysis
+- [✅/❌] Proper heading hierarchy
+- [✅/❌] Clear objective statement (TL;DR)
+- [✅/❌] Logical organization
+- [✅/❌] Appropriate rule type structure
+- [✅/❌] Fetch rules requirements included
+- [✅/❌] Rule loading optimization and aliasing implemented and validated
+
+## Memory Bank Integration Analysis
+- [✅/❌] Mode-specific requirements met
+- [✅/❌] Task integration specified
+- [✅/❌] Context management included
+- [✅/❌] Verification commitments present
+- [✅/❌] Artifact creation requirements
+
+## Language and Formatting Analysis
+- [✅/❌] Directive language usage (MUST, SHOULD, WILL)
+- [✅/❌] Critical information highlighting
+- [✅/❌] Example quality and completeness
+- [✅/❌] Technical accuracy
+- [✅/❌] Mermaid diagrams valid
+
+## Recommendations
+1. [Specific improvement recommendation]
+2. [Another recommendation]
+...
+
+## Compliance Matrix
+| Criteria | Status | Notes |
+|----|-----|----|
+| Front-matter | ✅/❌ | Details |
+| Structure | ✅/❌ | Details |
+| Content | ✅/❌ | Details |
+| Examples | ✅/❌ | Details |
+| Memory Bank Integration | ✅/❌ | Details |
+| Mode Compatibility | ✅/❌ | Details |
+| Rule Loading/Aliasing | ✅/❌ | Details |
+```
+
+## 9. COMPLEXITY-BASED VALIDATION
+
+### Level 1: Basic Cursor Rule Validation
+- Front-matter presence and basic structure
+- Clear objective statement
+- Basic content organization
+- Memory Bank compatibility check
+- Basic check for rule loading and alias format
+
+### Level 2: Standard Cursor Rule Validation
+- Complete front-matter validation
+- Content structure compliance
+- Language and formatting standards
+- Basic example validation
+- Mode integration verification
+- Detailed check for rule loading optimization and alias uniqueness
+
+### Level 3: Advanced Cursor Rule Validation
+- Comprehensive content analysis
+- Cross-reference validation
+- Technical accuracy verification
+- User experience assessment
+- Memory Bank system integration
+- In-depth analysis of rule loading patterns and alias effectiveness
+
+### Level 4: Enterprise Cursor Rule Validation
+- Full compliance matrix validation
+- Integration testing with other rules
+- Performance impact assessment
+- Documentation completeness audit
+- System-wide consistency verification
+- Full audit of rule loading, alias usage, and impact on token efficiency
+
+## 10. AUTOMATED VALIDATION SUPPORT
+
+### 10.1. Validation Script Integration
+```bash
+# Example validation command structure
+validate_cursor_rule [filename] --level [1-4] --report [format] --type [mdc|mode|memory-bank]
+```
+
+### 10.2. Continuous Validation
+- Pre-commit hooks for rule validation
+- CI/CD integration for rule repositories
+- Automated compliance reporting
+
+## ✅ VERIFICATION COMMITMENT
+
+I WILL ensure all Cursor .mdc rule files comply with the front-matter requirements and structural guidelines defined in this validation rule.
+I WILL perform comprehensive validation checks covering front-matter, content structure, **description and TL;DR quality**, language standards, Memory Bank integration, and technical compliance.
+I WILL generate detailed validation reports with specific recommendations for improvement and Memory Bank compatibility assessment.
+I WILL adapt validation rigor based on the complexity level of the Cursor rule being validated.
+I WILL maintain consistency with Memory Bank system standards while ensuring optimal AI behavior guidance.
+I WILL validate all cross-references to other rules and ensure technical accuracy of code examples and instructions.
+I WILL provide constructive feedback focused on improving rule effectiveness, AI interpretation quality, and Memory Bank system integration.
+I WILL ensure all validated rules follow the kebab-case naming convention and proper directory structure within the Memory Bank ecosystem.
+I WILL maintain validation documentation and update criteria as Memory Bank system and Cursor standards evolve.
+I WILL integrate Cursor rule validation with the Memory Bank task tracking system for comprehensive rule lifecycle management.
+I WILL verify mode-specific requirements and ensure proper integration with VAN, PLAN, CREATIVE, IMPLEMENT, REFLECT, and ARCHIVE phases.
+I WILL validate context management instructions and task integration specifications for seamless Memory Bank operation.
+I WILL ensure that all rules and files are referenced using the new `@<filename>` syntax or `@<ALIAS_NAME>` syntax, and that aliases are correctly defined, unique, and used.
+I WILL implement mechanisms to detect and prevent duplicate rule/file loading, promoting frequently used resources to aliases to optimize context and token efficiency.
+I WILL ensure that all workflows and processes have clearly defined and verifiable success criteria for each step, asking clarifying questions when criteria are insufficient.
+I WILL validate that success criteria are measurable, unambiguous, complete, and include proper validation methods for verifying fulfillment.

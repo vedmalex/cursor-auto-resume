@@ -29,8 +29,41 @@ This tool automatically detects this message and clicks the "resume the conversa
 
 ## Features
 
-- **Auto-click**: Automatically clicks the "resume the conversation" link when rate limits appear
-- **Anti-spam**: 3-second cooldown between clicks to prevent issues
+- **Auto-click**: Automatically clicks the "resume the conversation" link when rate limits appear.
+- **Enhanced Error Handling**: Automatically detects and attempts to resolve various connection and rate limit errors, including pop-up messages.
+- **Progressive Retry**: Implements a progressive backoff timer for repeated errors.
+- **Interactive UI Indicator**: An on-screen, draggable, and collapsible indicator with controls (Stop, Resume, Exit).
+- **Customizable Auto-stop**: Allows users to set the script's auto-stop duration.
+
+## Recent Enhancements
+
+This version introduces significant improvements to the script's robustness, user control, and overall usability:
+
+### Enhanced Error Handling & Progressive Backoff:
+- Modified error detection to globally search for error popups (e.g., "We're having trouble connecting to the model provider", "Too many requests") across the entire document, not just within the chat window.
+- Implemented a progressive retry timer (5s, 10s, 20s, 45s, 60s delays) for repeated error detections with the same message, to prevent aggressive retries.
+- Added comprehensive console logs for various error detection and click scenarios.
+
+### Interactive UI Indicator with Control Buttons:
+- Integrated "Остановить" (Stop), "Продолжить" (Resume), and "Выйти" (Exit) buttons directly onto the on-screen indicator for manual control of the script.
+- "Остановить" pauses automatic clicks.
+- "Продолжить" resets the timer and resumes clicks.
+- "Выйти" stops the script and removes the indicator.
+
+### Customizable Auto-Stop Duration:
+- Added a dropdown menu to the indicator allowing users to select the script's auto-stop duration (1, 5, 10, 15, 20, 30, 45, 60 minutes).
+- Selecting a new duration immediately updates the `maxDuration` and resets the timer.
+
+### Draggable and Collapsible Indicator:
+- Made the on-screen indicator draggable, allowing users to reposition it anywhere on the screen.
+- Added a "Свернуть" / "Развернуть" button to collapse the indicator into a compact strip and expand it back to full view.
+- Adjusted positioning logic from `right` to dynamic `left` calculation to ensure proper dragging behavior and prevent unintended expansion.
+
+### Refined Element Selectors:
+- Updated `chatWindow` selector to `div.full-input-box` for improved reliability.
+- Adjusted `toolLimitXpath` to target `<section>` elements containing relevant text within `data-markdown-raw` attributes.
+
+These changes significantly improve the script's robustness, user control, and overall usability within the Cursor/VS Code environment.
 
 ## How to Use
 
@@ -40,7 +73,7 @@ Permanent installation:
 2. Clone this repo to your home directory
 3. Add this to your `settings.json`:
 
-```
+```json
 "vscode_custom_css.imports": [
     "file://${userHome}/cursor-auto-resume/cursor-auto-resume.js"
 ]
@@ -60,15 +93,16 @@ One time installation:
 4. Paste it into the console and press Enter
 5. Close DevTools by clicking the X in the corner (optional)
 
-The script will now automatically click the "resume the conversation" link whenever it appears.
+Once the script is running, a draggable and collapsible indicator will appear in the top-right corner of your screen, allowing you to monitor and control the script's behavior.
 
 ## How It Works
 
 The script:
 
-1. Monitors the page for specific rate limit messages
-2. When found, looks for the exact "resume the conversation" link
-3. Clicks the link automatically (with a 3-second cooldown)
+1. Monitors the page for specific rate limit and error messages.
+2. When found, looks for the exact "resume the conversation" link or relevant error button (e.g., "Resume", "Try again").
+3. Clicks the link/button automatically (with a progressive cooldown for errors).
+4. Provides an interactive UI for monitoring and control.
 
 ## FAQ
 
@@ -96,4 +130,4 @@ Contributions are welcome! Please feel free to submit a pull request. When contr
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request 
+5. Open a Pull Request
