@@ -112,12 +112,32 @@
     });
     durationControlContainer.appendChild(durationSelect);
 
-    const durations = [1, 5, 10, 15, 20, 30, 45, 60];
-    durations.forEach(min => {
-        const option = document.createElement('option');
-        option.value = min;
-        option.innerText = `${min} мин`;
-        durationSelect.appendChild(option);
+    const durationOptions = [
+        { value: 1, label: '1 мин' },
+        { value: 5, label: '5 мин' },
+        { value: 10, label: '10 мин' },
+        { value: 15, label: '15 мин' },
+        { value: 20, label: '20 мин' },
+        { value: 30, label: '30 мин' },
+        { value: 45, label: '45 мин' },
+        { value: 60, label: '1 час' },
+        { value: 120, label: '2 часа' },
+        { value: 180, label: '3 часа' },
+        { value: 240, label: '4 часа' },
+        { value: 300, label: '5 часов' },
+        { value: 360, label: '6 часов' },
+        { value: 420, label: '7 часов' },
+        { value: 480, label: '8 часов' }
+    ];
+
+    durationOptions.forEach(option => {
+        const optionElement = document.createElement('option');
+        optionElement.value = option.value;
+        optionElement.innerText = option.label;
+        if (option.value === 30) { // Default selection
+            optionElement.selected = true;
+        }
+        durationSelect.appendChild(optionElement);
     });
 
     // Timer variables
