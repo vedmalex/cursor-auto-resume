@@ -1,6 +1,12 @@
 // Ultra-simple Cursor Auto Resume Script - Copy & paste into browser console
 
 (function () {
+    // Check for and stop any existing instance of the script
+    if (window.cursorAutoResumeScript && typeof window.cursorAutoResumeScript.exit === 'function') {
+        console.log('Cursor Auto Resume: Detected existing instance, stopping it.');
+        window.cursorAutoResumeScript.exit();
+    }
+
     console.log('Cursor Auto Resume: Running');
 
     // Visual indicator on screen
@@ -52,7 +58,7 @@
     header.appendChild(titleSpan);
 
     const collapseButton = document.createElement('button');
-    collapseButton.innerText = 'Свернуть'; // Text for collapse
+    collapseButton.innerText = 'Collapse'; // Text for collapse
     Object.assign(collapseButton.style, {
         backgroundColor: 'transparent',
         color: 'white',
@@ -97,7 +103,7 @@
     contentContainer.appendChild(durationControlContainer);
 
     const durationLabel = document.createElement('span');
-    durationLabel.innerText = 'Остановка через:';
+    durationLabel.innerText = 'Auto-stop in:';
     durationControlContainer.appendChild(durationLabel);
 
     const durationSelect = document.createElement('select');
@@ -113,21 +119,21 @@
     durationControlContainer.appendChild(durationSelect);
 
     const durationOptions = [
-        { value: 1, label: '1 мин' },
-        { value: 5, label: '5 мин' },
-        { value: 10, label: '10 мин' },
-        { value: 15, label: '15 мин' },
-        { value: 20, label: '20 мин' },
-        { value: 30, label: '30 мин' },
-        { value: 45, label: '45 мин' },
-        { value: 60, label: '1 час' },
-        { value: 120, label: '2 часа' },
-        { value: 180, label: '3 часа' },
-        { value: 240, label: '4 часа' },
-        { value: 300, label: '5 часов' },
-        { value: 360, label: '6 часов' },
-        { value: 420, label: '7 часов' },
-        { value: 480, label: '8 часов' }
+        { value: 1, label: '1 min' },
+        { value: 5, label: '5 min' },
+        { value: 10, label: '10 min' },
+        { value: 15, label: '15 min' },
+        { value: 20, label: '20 min' },
+        { value: 30, label: '30 min' },
+        { value: 45, label: '45 min' },
+        { value: 60, label: '1 hour' },
+        { value: 120, label: '2 hours' },
+        { value: 180, label: '3 hours' },
+        { value: 240, label: '4 hours' },
+        { value: 300, label: '5 hours' },
+        { value: 360, label: '6 hours' },
+        { value: 420, label: '7 hours' },
+        { value: 480, label: '8 hours' }
     ];
 
     durationOptions.forEach(option => {
@@ -149,6 +155,10 @@
 
     let intervalId;
     let isRunning = false; // Add state tracking
+    let isGenerating = false; // Track if generation is active
+    let generationMonitorId = null; // ID for generation monitoring interval
+    let pausedTime = 0; // Track paused time to subtract from total
+    let lastClickTime = 0; // Initialize lastClickTime
 
     // Renamed for clarity: tracks last time any interaction (click or error detection) happened
     let lastInteractionTime = 0;
@@ -212,27 +222,71 @@
     });
     contentContainer.appendChild(timerDisplay);
 
-    // Function to update timer display
-    function updateTimer() {
-        if (!timerDisplay) return;
+    // Function to detect if generation is active
+    function detectGenerationStatus() {
+        const elements = document.querySelectorAll('div, span');
+        let foundGenerating = false;
 
-        const now = Date.now();
-        const elapsed = now - startTime;
-        const remaining = maxDuration - elapsed;
-
-        if (remaining <= 0) {
-            timerDisplay.innerText = 'Time: Expired';
-            return;
+        for (let element of elements) {
+            const text = element.textContent || element.innerText || '';
+            if (text.includes('Generating') && text.includes('...')) {
+                // Also check if there's a Stop button nearby
+                const parent = element.closest('div');
+                if (parent && (parent.textContent.includes('Stop') || parent.querySelector('[class*="stop"]'))) {
+                    foundGenerating = true;
+                    break;
+                }
+            }
         }
 
-        const minutes = Math.floor(remaining / 60000);
-        const seconds = Math.floor((remaining % 60000) / 1000);
-        timerDisplay.innerText = `Time left: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        return foundGenerating;
     }
 
-    // Update timer display every second
-    setInterval(updateTimer, 1000);
-    updateTimer(); // Initial update
+    function updateGenerationStatus() {
+        const currentlyGenerating = detectGenerationStatus();
+
+        if (currentlyGenerating !== isGenerating) {
+            isGenerating = currentlyGenerating;
+
+            if (isGenerating) {
+                console.log('Cursor Auto Resume: Generation started - timer active');
+                updateIndicator('Generation active');
+                // Resume timer from where it was paused
+                if (pausedTime > 0) {
+                    startTime = Date.now() - pausedTime;
+                    pausedTime = 0;
+                } else {
+                    startTime = Date.now(); // Fresh start
+                }
+            } else {
+                console.log('Cursor Auto Resume: Generation stopped - timer paused');
+                updateIndicator('Generation paused');
+                // Calculate and store paused time
+                const elapsed = Date.now() - startTime;
+                pausedTime = elapsed;
+            }
+        }
+    }
+
+    function startGenerationMonitoring() {
+        if (generationMonitorId) {
+            clearInterval(generationMonitorId);
+        }
+
+        console.log('Cursor Auto Resume: Starting generation monitoring');
+        generationMonitorId = setInterval(updateGenerationStatus, 500); // Check every 500ms
+        updateGenerationStatus(); // Initial check
+    }
+
+    function stopGenerationMonitoring() {
+        if (generationMonitorId) {
+            clearInterval(generationMonitorId);
+            generationMonitorId = null;
+        }
+        console.log('Cursor Auto Resume: Stopped generation monitoring');
+        isGenerating = false;
+        pausedTime = 0;
+    }
 
     // Draggable functionality
     let isDragging = false;
@@ -265,13 +319,13 @@
             indicator.style.width = 'fit-content';
             indicator.style.padding = '5px 10px';
             header.style.borderBottom = 'none';
-            collapseButton.innerText = 'Развернуть'; // Text for expand
+            collapseButton.innerText = 'Expand'; // Text for expand
         } else {
             contentContainer.style.display = 'flex';
             indicator.style.width = 'auto';
             indicator.style.padding = '8px 12px';
             header.style.borderBottom = '1px solid #333';
-            collapseButton.innerText = 'Свернуть'; // Text for collapse
+            collapseButton.innerText = 'Collapse'; // Text for collapse
         }
     };
 
@@ -294,10 +348,49 @@
         return button;
     }
 
-    function updateIndicator(message) {
-        if (statusSpan) {
-            statusSpan.innerText = `Status: ${message}`;
+    function updateIndicator(statusText = '') {
+        if (!indicator) return;
+
+        const timerDisplay = indicator.querySelector('#timer-display');
+        const statusSpan = indicator.querySelector('#status-message');
+        const currentModeSpan = indicator.querySelector('#current-mode');
+        const collapseButton = indicator.querySelector('#collapse-button');
+
+        if (collapseButton) {
+            collapseButton.textContent = isCollapsed ? 'Expand' : 'Collapse';
         }
+
+        if (statusSpan) {
+            const generationStatus = isGenerating ? ' (Gen: Active)' : ' (Gen: Idle)';
+            statusSpan.innerText = `Status: ${statusText}${generationStatus}`;
+        }
+    }
+
+    function updateTimer() {
+        if (!timerDisplay) return;
+
+        const now = Date.now();
+        let elapsed;
+
+        if (isGenerating) {
+            // Timer is active - calculate elapsed time normally
+            elapsed = now - startTime;
+        } else {
+            // Timer is paused - use stored paused time
+            elapsed = pausedTime;
+        }
+
+        const remaining = maxDuration - elapsed;
+
+        if (remaining <= 0) {
+            timerDisplay.innerText = 'Time: Expired';
+            return;
+        }
+
+        const minutes = Math.floor(remaining / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+        const pausedIndicator = isGenerating ? '' : ' (Paused)';
+        timerDisplay.innerText = `Time left: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}${pausedIndicator}`;
     }
 
     function startScript() {
@@ -312,6 +405,10 @@
             clickResumeLink();
             updateTimer();
         }, 1000);
+
+        // Start generation monitoring
+        startGenerationMonitoring();
+
         updateIndicator('Running');
 
         // Also run once immediately
@@ -331,21 +428,32 @@
             clearInterval(intervalId);
             intervalId = null;
         }
+
+        // Stop generation monitoring
+        stopGenerationMonitoring();
+
         updateIndicator('Stopped');
     }
 
     function exitScript() {
-        console.log('Cursor Auto Resume: Exiting script');
+        console.log('Cursor Auto Resume: Exiting completely.');
         stopScript();
-        if (indicator && indicator.parentNode) {
-            indicator.parentNode.removeChild(indicator);
+        if (indicator) {
+            indicator.remove();
+            indicator = null; // Clear the reference
         }
+        // Clean up global reference to allow clean re-insertion
+        if (window.cursorAutoResumeScript) {
+            window.cursorAutoResumeScript = undefined;
+        }
+        updateIndicator('Exited');
     }
 
     // Global functions for manual control
     window.click_reset = function () {
         console.log('Cursor Auto Resume: Timer reset');
         startTime = Date.now();
+        pausedTime = 0; // Reset paused time
         updateTimer();
         if (!isRunning) {
             startScript(); // Restart if stopped
@@ -361,11 +469,19 @@
         startScript();
     };
 
+    // Expose control functions globally for clean restart
+    window.cursorAutoResumeScript = {
+        exit: exitScript,
+        stop: stopScript,
+        start: startScript,
+        reset: window.click_reset // Reuse existing global reset
+    };
+
     // Update button event listeners
-    const stopButton = createButton('Остановить', stopScript);
-    const resumeButton = createButton('Продолжить', click_reset);
-    const exitButton = createButton('Выйти', exitScript);
-    const resetTimerButton = createButton('Сброс таймера', click_reset);
+    const stopButton = createButton('Stop', stopScript);
+    const resumeButton = createButton('Resume', click_reset);
+    const exitButton = createButton('Exit', exitScript);
+    const resetTimerButton = createButton('Reset Timer', click_reset);
 
     // Main function that looks for and clicks the resume link
     function clickResumeLink() {
@@ -375,11 +491,22 @@
 
         console.log('Cursor Auto Resume: clickResumeLink executed.');
         updateIndicator('Checking...');
-        // Check if 30 minutes have passed
-        const now = Date.now();
-        if (now - startTime > maxDuration) {
-            console.log('Cursor Auto Resume: Maximum duration elapsed, stopping auto-click');
-            stopScript(); // Use stopScript instead of just clearing interval
+
+        let now = Date.now(); // Declare now at the very beginning of the function
+
+        // Check if max duration has passed (only when generation is active)
+        if (isGenerating) {
+            const elapsed = now - startTime;
+            if (elapsed > maxDuration) {
+                console.log('Cursor Auto Resume: Maximum duration elapsed, stopping auto-click');
+                stopScript(); // Use stopScript instead of just clearing interval
+                return;
+            }
+        }
+
+        // Prevent clicking too frequently (3 second cooldown)
+        if (now - lastClickTime < 3000) {
+            console.log('Cursor Auto Resume: Cooldown active, skipping click.');
             return;
         }
 
@@ -442,7 +569,11 @@
                         // Reset error state if a non-error link was clicked
                         lastDetectedErrorText = null;
                         currentErrorRetryCount = 0;
-                        return; // Exit after successful click
+                        // Successfully found and clicked a link, reset cooldown and error state
+                        lastClickTime = now;
+                        console.log(scenario.logMessage);
+                        updateIndicator(scenario.logMessage);
+                        return; // Stop after successful click
                     }
                 }
                 if (!linkFound) {
