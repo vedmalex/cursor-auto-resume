@@ -128,6 +128,7 @@
     durationSelect.value = (maxDuration / 60 / 1000).toString();
 
     let intervalId;
+    let isRunning = false; // Add state tracking
 
     // Renamed for clarity: tracks last time any interaction (click or error detection) happened
     let lastInteractionTime = 0;
@@ -192,23 +193,26 @@
     contentContainer.appendChild(timerDisplay);
 
     // Function to update timer display
-    function updateTimerDisplay() {
+    function updateTimer() {
+        if (!timerDisplay) return;
+
         const now = Date.now();
         const elapsed = now - startTime;
         const remaining = maxDuration - elapsed;
 
         if (remaining <= 0) {
             timerDisplay.innerText = 'Time: Expired';
-        } else {
-            const remainingMinutes = Math.floor(remaining / 60000);
-            const remainingSeconds = Math.floor((remaining % 60000) / 1000);
-            timerDisplay.innerText = `Time left: ${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+            return;
         }
+
+        const minutes = Math.floor(remaining / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+        timerDisplay.innerText = `Time left: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
     // Update timer display every second
-    setInterval(updateTimerDisplay, 1000);
-    updateTimerDisplay(); // Initial update
+    setInterval(updateTimer, 1000);
+    updateTimer(); // Initial update
 
     // Draggable functionality
     let isDragging = false;
@@ -276,58 +280,86 @@
         }
     }
 
-    function stopScript() {
-        clearInterval(intervalId);
-        console.log('Cursor Auto Resume: Script manually stopped.');
-        updateIndicator('Stopped (Manual)');
+    function startScript() {
+        if (isRunning) {
+            console.log('Cursor Auto Resume: Script is already running');
+            return;
+        }
+
+        console.log('Cursor Auto Resume: Starting script');
+        isRunning = true;
+        intervalId = setInterval(() => {
+            clickResumeLink();
+            updateTimer();
+        }, 1000);
+        updateIndicator('Running');
+
+        // Also run once immediately
+        clickResumeLink();
+        updateTimer();
     }
 
-    function resumeScript() {
-        click_reset();
-        if (!intervalId) {
-            intervalId = setInterval(clickResumeLink, 1000);
+    function stopScript() {
+        if (!isRunning) {
+            console.log('Cursor Auto Resume: Script is already stopped');
+            return;
         }
-        console.log('Cursor Auto Resume: Script manually resumed.');
-        updateIndicator('Resumed');
+
+        console.log('Cursor Auto Resume: Stopping script');
+        isRunning = false;
+        if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+        }
+        updateIndicator('Stopped');
     }
 
     function exitScript() {
-        clearInterval(intervalId);
-        if (indicator) {
-            indicator.remove();
+        console.log('Cursor Auto Resume: Exiting script');
+        stopScript();
+        if (indicator && indicator.parentNode) {
+            indicator.parentNode.removeChild(indicator);
         }
-        console.log('Cursor Auto Resume: Script exited and indicator removed.');
     }
 
-    createButton('Остановить', stopScript);
-    createButton('Продолжить', resumeScript);
-    createButton('Сброс таймера', click_reset); // Add reset timer button
-    createButton('Выйти', exitScript);
-
-    updateIndicator('Running');
-
-    // Function to reset the timer
-    function click_reset() {
-        startTime = Date.now();
-        lastInteractionTime = Date.now(); // Reset interaction time as well
-        lastDetectedErrorText = null; // Clear error state on manual reset
-        currentErrorRetryCount = 0;
+    // Global functions for manual control
+    window.click_reset = function () {
         console.log('Cursor Auto Resume: Timer reset');
+        startTime = Date.now();
+        updateTimer();
+        if (!isRunning) {
+            startScript(); // Restart if stopped
+        }
         updateIndicator('Timer reset');
-    }
+    };
 
-    // Make click_reset available globally
-    window.click_reset = click_reset;
+    window.click_stop = function () {
+        stopScript();
+    };
+
+    window.click_start = function () {
+        startScript();
+    };
+
+    // Update button event listeners
+    const stopButton = createButton('Остановить', stopScript);
+    const resumeButton = createButton('Продолжить', click_reset);
+    const exitButton = createButton('Выйти', exitScript);
+    const resetTimerButton = createButton('Сброс таймера', click_reset);
 
     // Main function that looks for and clicks the resume link
     function clickResumeLink() {
-        const now = Date.now();
+        if (!isRunning) {
+            return; // Don't execute if script is stopped
+        }
 
-        // Check if max duration has passed
+        console.log('Cursor Auto Resume: clickResumeLink executed.');
+        updateIndicator('Checking...');
+        // Check if 30 minutes have passed
+        const now = Date.now();
         if (now - startTime > maxDuration) {
-            console.log('Cursor Auto Resume: Max duration elapsed, stopping auto-click');
-            updateIndicator('Stopped (Max duration elapsed)');
-            clearInterval(intervalId);
+            console.log('Cursor Auto Resume: Maximum duration elapsed, stopping auto-click');
+            stopScript(); // Use stopScript instead of just clearing interval
             return;
         }
 
@@ -528,11 +560,8 @@
         }
     }
 
-    // Run periodically
-    intervalId = setInterval(clickResumeLink, 1000);
-
-    // Also run once immediately
-    clickResumeLink();
+    // Start the script initially
+    startScript();
 
     // Log timer info
     console.log('Cursor Auto Resume: Will stop after 30 minutes. Call click_reset() to reset timer.');
