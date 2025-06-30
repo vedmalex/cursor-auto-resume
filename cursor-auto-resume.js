@@ -139,8 +139,8 @@
     const errorScenarios = [
         {
             errorText: "We're having trouble connecting to the model provider",
-            buttonText: 'Try again', // Corrected button text
-            logMessage: 'Clicking "Try again" button for connection error.'
+            buttonText: 'Resume', // Updated to match error3.html
+            logMessage: 'Clicking "Resume" button for connection error.'
         },
         {
             errorText: "We're experiencing high demand for",
@@ -166,6 +166,11 @@
             errorText: "Session expired",
             buttonText: 'Log in',
             logMessage: 'Clicking "Log in" button for session expired error.'
+        },
+        {
+            errorText: "This might be temporary - please try again in a moment",
+            buttonText: 'Resume',
+            logMessage: 'Clicking "Resume" button for temporary connection error.'
         }
     ];
 
@@ -176,6 +181,34 @@
         updateIndicator(`Duration: ${selectedMinutes} min`);
         click_reset(); // Reset timer with new duration
     };
+
+    // Timer display element
+    const timerDisplay = document.createElement('div');
+    Object.assign(timerDisplay.style, {
+        fontSize: '10px',
+        color: 'lightblue',
+        marginTop: '3px'
+    });
+    contentContainer.appendChild(timerDisplay);
+
+    // Function to update timer display
+    function updateTimerDisplay() {
+        const now = Date.now();
+        const elapsed = now - startTime;
+        const remaining = maxDuration - elapsed;
+
+        if (remaining <= 0) {
+            timerDisplay.innerText = 'Time: Expired';
+        } else {
+            const remainingMinutes = Math.floor(remaining / 60000);
+            const remainingSeconds = Math.floor((remaining % 60000) / 1000);
+            timerDisplay.innerText = `Time left: ${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+    }
+
+    // Update timer display every second
+    setInterval(updateTimerDisplay, 1000);
+    updateTimerDisplay(); // Initial update
 
     // Draggable functionality
     let isDragging = false;
@@ -268,6 +301,7 @@
 
     createButton('Остановить', stopScript);
     createButton('Продолжить', resumeScript);
+    createButton('Сброс таймера', click_reset); // Add reset timer button
     createButton('Выйти', exitScript);
 
     updateIndicator('Running');
