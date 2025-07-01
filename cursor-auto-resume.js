@@ -645,7 +645,6 @@
         }
 
         // Proceed to check for elements if not in cooldown
-        scriptLog('Cursor Auto Resume: clickResumeLink executed.');
         updateIndicator('Checking...');
 
         let errorHandledInThisCycle = false;
