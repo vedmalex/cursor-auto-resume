@@ -12,9 +12,15 @@
     let isLogCollapsed = false;
     const logHistory = [];
     const MAX_LOG_LINES = 100; // Limit the number of lines in the log
+    const DEBUG_MODE = false; // Set to true to see debug messages
 
     // Custom logging function for the script only
     function scriptLog(message, level = 'INFO') {
+        // Skip DEBUG messages if DEBUG_MODE is false
+        if (level === 'DEBUG' && !DEBUG_MODE) {
+            return;
+        }
+
         if (!logOutput) {
             console.log('Script Log:', message); // Fallback to original console
             return;
@@ -116,8 +122,18 @@
     indicator.appendChild(contentContainer);
 
     const statusSpan = document.createElement('span');
-    statusSpan.id = 'cursor-auto-resume-status';
+    statusSpan.id = 'status-message';
     contentContainer.appendChild(statusSpan);
+
+    // Current settings display
+    const currentModeSpan = document.createElement('span');
+    currentModeSpan.id = 'current-mode';
+    Object.assign(currentModeSpan.style, {
+        fontSize: '10px',
+        color: '#aaa',
+        fontStyle: 'italic'
+    });
+    contentContainer.appendChild(currentModeSpan);
 
     const buttonContainer = document.createElement('div');
     Object.assign(buttonContainer.style, {
@@ -180,6 +196,125 @@
         }
         durationSelect.appendChild(optionElement);
     });
+
+    // Model Selection Container
+    const modelControlContainer = document.createElement('div');
+    Object.assign(modelControlContainer.style, {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '3px',
+        marginTop: '5px',
+        color: 'lightgray'
+    });
+    contentContainer.appendChild(modelControlContainer);
+
+    const modelLabel = document.createElement('span');
+    modelLabel.innerText = 'Auto-resume for models:';
+    Object.assign(modelLabel.style, {
+        fontSize: '10px',
+        fontWeight: 'bold'
+    });
+    modelControlContainer.appendChild(modelLabel);
+
+    const modelSelectContainer = document.createElement('div');
+    Object.assign(modelSelectContainer.style, {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '5px'
+    });
+    modelControlContainer.appendChild(modelSelectContainer);
+
+    const modelSelect = document.createElement('select');
+    modelSelect.id = 'model-resume-select';
+    modelSelect.multiple = true;
+    modelSelect.size = 3;
+    Object.assign(modelSelect.style, {
+        backgroundColor: '#333',
+        color: 'white',
+        border: '1px solid #666',
+        borderRadius: '4px',
+        fontSize: '10px',
+        padding: '2px 4px',
+        minWidth: '150px',
+        maxHeight: '60px'
+    });
+    modelSelectContainer.appendChild(modelSelect);
+
+    // Add header option
+    const headerOption = document.createElement('option');
+    headerOption.textContent = '-- Select models --';
+    headerOption.disabled = true;
+    headerOption.style.fontStyle = 'italic';
+    modelSelect.appendChild(headerOption);
+
+    // Model selection change handler
+    modelSelect.onchange = () => {
+        selectedModelsForResume.clear();
+        for (const option of modelSelect.selectedOptions) {
+            if (!option.disabled) {
+                selectedModelsForResume.add(option.value);
+            }
+        }
+
+        const selectedCount = selectedModelsForResume.size;
+        const totalCount = availableModels.length;
+
+        if (selectedCount === 0) {
+            scriptLog('Auto-resume enabled for ALL models (none selected)');
+        } else {
+            scriptLog(`Auto-resume enabled for ${selectedCount}/${totalCount} models: ${Array.from(selectedModelsForResume).join(', ')}`);
+        }
+
+        updateIndicator('Model selection updated');
+    };
+
+    const modelButtonContainer = document.createElement('div');
+    Object.assign(modelButtonContainer.style, {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '2px'
+    });
+    modelSelectContainer.appendChild(modelButtonContainer);
+
+    const selectAllModelsButton = document.createElement('button');
+    selectAllModelsButton.innerText = 'All';
+    Object.assign(selectAllModelsButton.style, {
+        backgroundColor: '#444',
+        color: 'white',
+        border: '1px solid #666',
+        padding: '2px 5px',
+        borderRadius: '3px',
+        cursor: 'pointer',
+        fontSize: '9px'
+    });
+    selectAllModelsButton.onclick = () => {
+        for (const option of modelSelect.options) {
+            if (!option.disabled) {
+                option.selected = true;
+            }
+        }
+        modelSelect.onchange();
+    };
+    modelButtonContainer.appendChild(selectAllModelsButton);
+
+    const clearModelsButton = document.createElement('button');
+    clearModelsButton.innerText = 'None';
+    Object.assign(clearModelsButton.style, {
+        backgroundColor: '#444',
+        color: 'white',
+        border: '1px solid #666',
+        padding: '2px 5px',
+        borderRadius: '3px',
+        cursor: 'pointer',
+        fontSize: '9px'
+    });
+    clearModelsButton.onclick = () => {
+        for (const option of modelSelect.options) {
+            option.selected = false;
+        }
+        modelSelect.onchange();
+    };
+    modelButtonContainer.appendChild(clearModelsButton);
 
     // Log Display Container
     const logContainer = document.createElement('div');
@@ -459,6 +594,76 @@
         return button;
     }
 
+    // Function to get current model and agent settings
+    function getCurrentSettings() {
+        let currentModel = 'Unknown';
+        let currentAgent = 'Unknown';
+
+        // Extract current model from model dropdown (improved selectors)
+        const modelElements = document.querySelectorAll(
+            '.composer-unified-dropdown-model .truncate-x, ' +
+            '.composer-unified-dropdown-model span, ' +
+            '.composer-unified-dropdown-model .monaco-highlighted-label'
+        );
+
+        for (const element of modelElements) {
+            const text = element.textContent.trim();
+            if (text && !text.includes('⌘') && text !== 'Agent' && text !== 'Manual' && text.length > 2) {
+                currentModel = text;
+                break;
+            }
+        }
+
+        // Extract current agent/mode from agent dropdown (improved selectors)
+        const agentElements = document.querySelectorAll(
+            '.composer-unified-dropdown .truncate-x, ' +
+            '.composer-unified-dropdown span'
+        );
+
+        for (const element of agentElements) {
+            const text = element.textContent.trim();
+            if (text && !text.includes('⌘') && text !== currentModel &&
+                (text === 'Agent' || text === 'Chat' || text === 'Composer' || text === 'Manual')) {
+                currentAgent = text;
+                break;
+            }
+        }
+
+        // Fallback: try alternative selectors if nothing found
+        if (currentModel === 'Unknown') {
+            const fallbackModelElements = document.querySelectorAll(
+                '[class*="model"] .truncate-x, ' +
+                '[class*="dropdown"] .truncate-x, ' +
+                '[class*="model"] .monaco-highlighted-label, ' +
+                '[class*="unified"] .truncate-x'
+            );
+
+            for (const element of fallbackModelElements) {
+                const text = element.textContent.trim();
+                if (text && (text.includes('gemini') || text.includes('gpt') || text.includes('claude') ||
+                           text.includes('flash') || text.includes('sonnet') || text.includes('cursor') ||
+                           text.includes('deepseek') || text.includes('grok'))) {
+                    currentModel = text;
+                    break;
+                }
+            }
+        }
+
+        // Special case: look for specific icons to determine agent mode
+        if (currentAgent === 'Unknown') {
+            const targetIcon = document.querySelector('.codicon-target-two');
+            const infinityIcon = document.querySelector('.codicon-infinity');
+
+            if (targetIcon) {
+                currentAgent = 'Manual';
+            } else if (infinityIcon) {
+                currentAgent = 'Agent';
+            }
+        }
+
+        return { model: currentModel, agent: currentAgent };
+    }
+
     function updateIndicator(statusText = '') {
         if (!indicator) return;
 
@@ -472,8 +677,14 @@
         }
 
         if (statusSpan) {
-            const generationStatus = isGenerating ? ' (Gen: Active)' : ' (Gen: Paused)'; // Changed to Paused
+            const generationStatus = isGenerating ? ' (Gen: Active)' : ' (Gen: Paused)';
             statusSpan.innerText = `Status: ${statusText}${generationStatus}`;
+        }
+
+        // Update current settings display
+        if (currentModeSpan) {
+            const settings = getCurrentSettings();
+            currentModeSpan.innerText = `Model: ${settings.model} | Mode: ${settings.agent}`;
         }
     }
 
@@ -515,10 +726,14 @@
         intervalId = setInterval(() => {
             clickResumeLink();
             updateTimer();
+            updateIndicator('Running'); // This will also update current settings
         }, 1000);
 
         // Start generation monitoring
         startGenerationMonitoring();
+
+        // Start model selector monitoring
+        startModelSelectorMonitoring();
 
         updateIndicator('Running');
 
@@ -543,6 +758,9 @@
         // Stop generation monitoring
         stopGenerationMonitoring();
 
+        // Stop model selector monitoring
+        stopModelSelectorMonitoring();
+
         updateIndicator('Stopped');
     }
 
@@ -555,6 +773,9 @@
         }
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+
+        // Stop model selector monitoring
+        stopModelSelectorMonitoring();
 
         if (indicator) {
             indicator.remove();
@@ -601,11 +822,63 @@
     const resumeButton = createButton('Resume', click_reset);
     const exitButton = createButton('Exit', exitScript);
     const resetTimerButton = createButton('Reset Timer', click_reset);
+    const refreshSettingsButton = createButton('Refresh Settings', () => {
+        updateIndicator('Refreshing settings...');
+        scriptLog('Manually refreshing current settings and model list');
+
+        // Try to extract models from current DOM
+        const currentModels = extractAvailableModels();
+        if (currentModels.length > 0) {
+            availableModels = currentModels;
+            updateModelCombobox();
+            scriptLog(`Updated model list: ${currentModels.join(', ')}`);
+        } else {
+            scriptLog('No models found in current DOM. Try opening model selector to populate list.');
+        }
+    });
+
+    // Function to try extracting models from current DOM (without waiting for selector)
+    function tryExtractCurrentModels() {
+        // Look for any model names in the current DOM
+        const allElements = document.querySelectorAll('*');
+        const potentialModels = [];
+
+        for (const element of allElements) {
+            const text = element.textContent?.trim();
+            if (text && text.length > 3 && text.length < 30) {
+                if (text.includes('gemini') || text.includes('gpt') || text.includes('claude') ||
+                    text.includes('sonnet') || text.includes('cursor') || text.includes('deepseek') ||
+                    text.includes('grok') || text.includes('flash')) {
+
+                    // Clean up the model name
+                    const cleanName = text.replace(/[^\w\-\.]/g, '').toLowerCase();
+                    if (cleanName.length > 3 && !potentialModels.includes(cleanName)) {
+                        potentialModels.push(cleanName);
+                    }
+                }
+            }
+        }
+
+        if (potentialModels.length > 0) {
+            scriptLog(`Found potential models in DOM: ${potentialModels.join(', ')}`);
+            return potentialModels;
+        }
+
+        return [];
+    }
 
     // Main function that looks for and clicks the resume link
     function clickResumeLink() {
         if (!isRunning) {
             return; // Don't execute if script is stopped
+        }
+
+        // Check if current model is selected for auto-resume
+        if (!isCurrentModelSelectedForResume()) {
+            const settings = getCurrentSettings();
+            scriptLog(`Skipping auto-resume for model: ${settings.model} (not in selected list)`);
+            updateIndicator(`Skipped: ${settings.model}`);
+            return;
         }
 
         scriptLog('Cursor Auto Resume: clickResumeLink executed.');
@@ -830,8 +1103,122 @@
         }
     }
 
+    // --- Model Selection System ---
+    let availableModels = [];
+    let selectedModelsForResume = new Set(); // Models for which auto-resume is enabled
+    let modelSelectorObserver = null;
+
+    // Function to extract available models from the model selector
+    function extractAvailableModels() {
+        const modelItems = document.querySelectorAll('.composer-unified-context-menu-item .monaco-highlighted-label');
+        const models = [];
+
+        for (const item of modelItems) {
+            const modelName = item.textContent.trim();
+            if (modelName &&
+                modelName !== 'Auto' &&
+                modelName !== 'MAX Mode' &&
+                modelName !== 'Add models' &&
+                !modelName.includes('⌘')) {
+                models.push(modelName);
+            }
+        }
+
+        scriptLog(`Extracted ${models.length} models: ${models.join(', ')}`);
+        return models;
+    }
+
+    // Function to monitor model selector appearance/disappearance
+    function startModelSelectorMonitoring() {
+        if (modelSelectorObserver) {
+            modelSelectorObserver.disconnect();
+        }
+
+        modelSelectorObserver = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        // Check if model selector appeared
+                        if (node.classList?.contains('typeahead-popover') ||
+                            node.querySelector?.('.typeahead-popover')) {
+                            setTimeout(() => {
+                                const newModels = extractAvailableModels();
+                                if (newModels.length > 0) {
+                                    availableModels = newModels;
+                                    updateModelCombobox();
+                                    scriptLog(`Model selector detected, updated model list`);
+                                }
+                            }, 100); // Small delay to ensure DOM is ready
+                        }
+                    }
+                });
+            });
+        });
+
+        modelSelectorObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        scriptLog('Model selector monitoring started');
+    }
+
+    // Function to stop model selector monitoring
+    function stopModelSelectorMonitoring() {
+        if (modelSelectorObserver) {
+            modelSelectorObserver.disconnect();
+            modelSelectorObserver = null;
+            scriptLog('Model selector monitoring stopped');
+        }
+    }
+
+    // Function to update model combobox
+    function updateModelCombobox() {
+        const modelSelect = document.getElementById('model-resume-select');
+        if (!modelSelect) return;
+
+        // Clear existing options except the header
+        while (modelSelect.children.length > 1) {
+            modelSelect.removeChild(modelSelect.lastChild);
+        }
+
+        // Add available models as options
+        availableModels.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model;
+            option.textContent = model;
+            option.selected = selectedModelsForResume.has(model);
+            modelSelect.appendChild(option);
+        });
+    }
+
+    // Function to check if current model is selected for auto-resume
+    function isCurrentModelSelectedForResume() {
+        const settings = getCurrentSettings();
+        const currentModel = settings.model;
+
+        // If no models selected, work with all models (backward compatibility)
+        if (selectedModelsForResume.size === 0) {
+            return true;
+        }
+
+        return selectedModelsForResume.has(currentModel);
+    }
+
     // Start the script initially
     startScript();
+
+    // Initialize model list
+    setTimeout(() => {
+        const initialModels = tryExtractCurrentModels();
+        if (initialModels.length > 0) {
+            availableModels = initialModels;
+            updateModelCombobox();
+            scriptLog(`Initial model list populated: ${initialModels.join(', ')}`);
+        } else {
+            scriptLog('No initial models found. Model list will be populated when model selector appears.');
+        }
+    }, 1000); // Small delay to ensure DOM is ready
 
     // Log timer info
     scriptLog('Cursor Auto Resume: Will stop after 30 minutes. Call click_reset() to reset timer.');
