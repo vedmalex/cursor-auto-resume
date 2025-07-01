@@ -7,7 +7,42 @@
         window.cursorAutoResumeScript.exit();
     }
 
-    console.log('Cursor Auto Resume: Running');
+    // --- Custom Logging Setup ---
+    let logOutput = null; // Will be set once the UI element is created
+    let isLogCollapsed = false;
+    const logHistory = [];
+    const MAX_LOG_LINES = 100; // Limit the number of lines in the log
+
+    // Custom logging function for the script only
+    function scriptLog(message, level = 'INFO') {
+        if (!logOutput) {
+            console.log('Script Log:', message); // Fallback to original console
+            return;
+        }
+        const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const formattedMessage = `[${timestamp}] ${level}: ${message}`;
+
+        logHistory.push(formattedMessage);
+        if (logHistory.length > MAX_LOG_LINES) {
+            logHistory.shift(); // Remove oldest entry
+        }
+
+        // Update DOM safely (only if not collapsed)
+        if (!isLogCollapsed) {
+            // Clear existing content safely by removing all children
+            while (logOutput.firstChild) {
+                logOutput.removeChild(logOutput.firstChild);
+            }
+            logHistory.forEach(line => {
+                const lineDiv = document.createElement('div');
+                lineDiv.textContent = line; // Use textContent for safety
+                logOutput.appendChild(lineDiv);
+            });
+            logOutput.scrollTop = logOutput.scrollHeight; // Auto-scroll to bottom
+        }
+    }
+
+    scriptLog('Cursor Auto Resume: Running');
 
     // Visual indicator on screen
     const indicatorId = 'cursor-auto-resume-indicator';
@@ -146,6 +181,73 @@
         durationSelect.appendChild(optionElement);
     });
 
+    // Log Display Container
+    const logContainer = document.createElement('div');
+    Object.assign(logContainer.style, {
+        marginTop: '10px',
+        borderTop: '1px solid #333',
+        paddingTop: '5px',
+        width: '100%' // Ensure it takes full width
+    });
+    contentContainer.appendChild(logContainer);
+
+    const logHeader = document.createElement('div');
+    Object.assign(logHeader.style, {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '5px'
+    });
+    logContainer.appendChild(logHeader);
+
+    const logTitle = document.createElement('span');
+    logTitle.innerText = 'Script Log';
+    Object.assign(logTitle.style, {
+        fontWeight: 'bold',
+        color: '#aaa'
+    });
+    logHeader.appendChild(logTitle);
+
+    const logCollapseButton = document.createElement('button');
+    logCollapseButton.innerText = 'Collapse Log';
+    Object.assign(logCollapseButton.style, {
+        backgroundColor: 'transparent',
+        color: 'white',
+        border: 'none',
+        fontSize: '10px',
+        cursor: 'pointer',
+        padding: '2px 5px',
+        minWidth: '40px'
+    });
+    logHeader.appendChild(logCollapseButton);
+
+    logOutput = document.createElement('div'); // Assign to the global logOutput variable
+    Object.assign(logOutput.style, {
+        backgroundColor: '#222',
+        border: '1px solid #444',
+        padding: '5px',
+        maxHeight: '150px', // Limit height
+        overflowY: 'auto', // Scrollable
+        fontFamily: 'monospace',
+        fontSize: '10px',
+        color: '#eee',
+        whiteSpace: 'pre-wrap', // Preserve whitespace and wrap text
+        wordBreak: 'break-word' // Break long words
+    });
+    logContainer.appendChild(logOutput);
+
+    const toggleLogCollapse = () => {
+        isLogCollapsed = !isLogCollapsed;
+        if (isLogCollapsed) {
+            logOutput.style.display = 'none';
+            logCollapseButton.innerText = 'Expand Log';
+        } else {
+            logOutput.style.display = 'block';
+            logCollapseButton.innerText = 'Collapse Log';
+        }
+    };
+    logCollapseButton.onclick = toggleLogCollapse;
+
     // Timer variables
     let startTime = Date.now();
     let maxDuration = 30 * 60 * 1000; // Default 30 minutes in milliseconds
@@ -169,46 +271,46 @@
     // Define error scenarios globally
     const errorScenarios = [
         {
+            errorText: "rate limit",
+            buttonText: "Try again",
+            logMessage: 'Clicking "Try again" button for rate limit error.'
+        },
+        {
+            errorText: "Rate limit",
+            buttonText: "Try again",
+            logMessage: 'Clicking "Try again" button for rate limit error.'
+        },
+        {
+            errorText: "Something went wrong",
+            buttonText: "Try again",
+            logMessage: 'Clicking "Try again" button for something went wrong error.'
+        },
+        {
+            errorText: "An error occurred",
+            buttonText: "Resume",
+            logMessage: 'Clicking "Resume" button for general error.'
+        },
+        {
+            errorText: "We hit the usage limit",
+            buttonText: "Resume",
+            logMessage: 'Clicking "Resume" button for usage limit error.'
+        },
+        {
             errorText: "We're having trouble connecting to the model provider",
-            buttonText: 'Resume', // Updated to match error3.html
-            logMessage: 'Clicking "Resume" button for connection error.'
+            buttonText: "Try again",
+            logMessage: 'Clicking "Try again" button for model provider connection error.'
         },
         {
-            errorText: "We're experiencing high demand for",
-            buttonText: 'Try again',
-            logMessage: 'Clicking "Try again" button for high demand error.'
-        },
-        {
-            errorText: "Connection failed. If the problem persists, please check your internet connection",
-            buttonText: 'Try again',
-            logMessage: 'Clicking "Try again" button for connection failed error.'
-        },
-        {
-            errorText: "Too many requests",
-            buttonText: 'Try again',
-            logMessage: 'Clicking "Try again" button for too many requests error.'
-        },
-        {
-            errorText: "An unexpected error occurred",
-            buttonText: 'Try again',
-            logMessage: 'Clicking "Try again" button for unexpected error.'
-        },
-        {
-            errorText: "Session expired",
-            buttonText: 'Log in',
-            logMessage: 'Clicking "Log in" button for session expired error.'
-        },
-        {
-            errorText: "This might be temporary - please try again in a moment",
-            buttonText: 'Resume',
-            logMessage: 'Clicking "Resume" button for temporary connection error.'
+            errorText: "We're having trouble connecting to the model provider",
+            buttonText: "Resume",
+            logMessage: 'Clicking "Resume" button for model provider connection error.'
         }
     ];
 
     durationSelect.onchange = (event) => {
         const selectedMinutes = parseInt(event.target.value);
         maxDuration = selectedMinutes * 60 * 1000;
-        console.log(`Cursor Auto Resume: Auto-stop duration set to ${selectedMinutes} minutes.`);
+        scriptLog(`Cursor Auto Resume: Auto-stop duration set to ${selectedMinutes} minutes.`);
         updateIndicator(`Duration: ${selectedMinutes} min`);
         click_reset(); // Reset timer with new duration
     };
@@ -229,10 +331,17 @@
 
         for (let element of elements) {
             const text = element.textContent || element.innerText || '';
-            if (text.includes('Generating') && text.includes('...')) {
-                // Also check if there's a Stop button nearby
+            // Check for 'Generating' text without requiring '...'
+            if (text.includes('Generating')) {
+                // Ensure it's not part of a larger, unrelated text
+                // Prioritize finding 'Stop' button or relevant classes in parent
                 const parent = element.closest('div');
-                if (parent && (parent.textContent.includes('Stop') || parent.querySelector('[class*="stop"]'))) {
+                if (parent && (parent.textContent.includes('Stop') ||
+                               parent.querySelector('[class*="stop"]') ||
+                               parent.querySelector('[role*="button"][data-text="Stop"]') || // Specific stop button check
+                               parent.classList.contains('anysphere-loading-indicator') || // Check for common loading indicators
+                               parent.classList.contains('full-input-box-generating')) // Specific class for generating state
+                ) {
                     foundGenerating = true;
                     break;
                 }
@@ -249,21 +358,16 @@
             isGenerating = currentlyGenerating;
 
             if (isGenerating) {
-                console.log('Cursor Auto Resume: Generation started - timer active');
+                scriptLog('Cursor Auto Resume: Generation started - timer active');
+                // When generation starts, resume timer from where it was paused
+                startTime = Date.now() - pausedTime;
+                pausedTime = 0;
                 updateIndicator('Generation active');
-                // Resume timer from where it was paused
-                if (pausedTime > 0) {
-                    startTime = Date.now() - pausedTime;
-                    pausedTime = 0;
-                } else {
-                    startTime = Date.now(); // Fresh start
-                }
             } else {
-                console.log('Cursor Auto Resume: Generation stopped - timer paused');
+                scriptLog('Cursor Auto Resume: Generation stopped - timer paused');
+                // When generation stops, calculate and store elapsed time as pausedTime
+                pausedTime = Date.now() - startTime; // This correctly stores elapsed time for pause
                 updateIndicator('Generation paused');
-                // Calculate and store paused time
-                const elapsed = Date.now() - startTime;
-                pausedTime = elapsed;
             }
         }
     }
@@ -273,8 +377,8 @@
             clearInterval(generationMonitorId);
         }
 
-        console.log('Cursor Auto Resume: Starting generation monitoring');
-        generationMonitorId = setInterval(updateGenerationStatus, 500); // Check every 500ms
+        scriptLog('Cursor Auto Resume: Starting generation monitoring');
+        generationMonitorId = setInterval(updateGenerationStatus, 1000); // Check every 1000ms (1 second)
         updateGenerationStatus(); // Initial check
     }
 
@@ -283,7 +387,7 @@
             clearInterval(generationMonitorId);
             generationMonitorId = null;
         }
-        console.log('Cursor Auto Resume: Stopped generation monitoring');
+        scriptLog('Cursor Auto Resume: Stopped generation monitoring');
         isGenerating = false;
         pausedTime = 0;
     }
@@ -292,23 +396,30 @@
     let isDragging = false;
     let offsetX, offsetY;
 
-    header.addEventListener('mousedown', (e) => {
+    const handleMouseDown = (e) => {
         isDragging = true;
         offsetX = e.clientX - indicator.getBoundingClientRect().left;
         offsetY = e.clientY - indicator.getBoundingClientRect().top;
         indicator.style.cursor = 'grabbing';
-    });
+    };
 
-    document.addEventListener('mousemove', (e) => {
+    const handleMouseMove = (e) => {
         if (!isDragging) return;
         indicator.style.left = `${e.clientX - offsetX}px`;
         indicator.style.top = `${e.clientY - offsetY}px`;
-    });
+    };
 
-    document.addEventListener('mouseup', () => {
+    // Define mouseup handler outside to remove it cleanly
+    const handleMouseUp = () => {
         isDragging = false;
-        indicator.style.cursor = 'grab';
-    });
+        if (indicator) { // Add check if indicator still exists
+            indicator.style.cursor = 'grab';
+        }
+    };
+
+    header.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
 
     // Collapsible functionality
     let isCollapsed = false;
@@ -361,7 +472,7 @@
         }
 
         if (statusSpan) {
-            const generationStatus = isGenerating ? ' (Gen: Active)' : ' (Gen: Idle)';
+            const generationStatus = isGenerating ? ' (Gen: Active)' : ' (Gen: Paused)'; // Changed to Paused
             statusSpan.innerText = `Status: ${statusText}${generationStatus}`;
         }
     }
@@ -395,11 +506,11 @@
 
     function startScript() {
         if (isRunning) {
-            console.log('Cursor Auto Resume: Script is already running');
+            scriptLog('Cursor Auto Resume: Script is already running');
             return;
         }
 
-        console.log('Cursor Auto Resume: Starting script');
+        scriptLog('Cursor Auto Resume: Starting script');
         isRunning = true;
         intervalId = setInterval(() => {
             clickResumeLink();
@@ -418,11 +529,11 @@
 
     function stopScript() {
         if (!isRunning) {
-            console.log('Cursor Auto Resume: Script is already stopped');
+            scriptLog('Cursor Auto Resume: Script is already stopped');
             return;
         }
 
-        console.log('Cursor Auto Resume: Stopping script');
+        scriptLog('Cursor Auto Resume: Stopping script');
         isRunning = false;
         if (intervalId) {
             clearInterval(intervalId);
@@ -436,22 +547,30 @@
     }
 
     function exitScript() {
-        console.log('Cursor Auto Resume: Exiting completely.');
+        scriptLog('Cursor Auto Resume: Exiting completely.');
         stopScript();
+        // Remove event listeners to prevent errors after indicator is gone
+        if (header && handleMouseDown) {
+            header.removeEventListener('mousedown', handleMouseDown);
+        }
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+
         if (indicator) {
             indicator.remove();
             indicator = null; // Clear the reference
         }
-        // Clean up global reference to allow clean re-insertion
+
         if (window.cursorAutoResumeScript) {
             window.cursorAutoResumeScript = undefined;
         }
-        updateIndicator('Exited');
+        updateIndicator('Exited'); // This will now do nothing if indicator is null
+        console.log('Cursor Auto Resume: Indicator removed and global reference cleared.'); // Final message to browser console
     }
 
     // Global functions for manual control
     window.click_reset = function () {
-        console.log('Cursor Auto Resume: Timer reset');
+        scriptLog('Cursor Auto Resume: Timer reset');
         startTime = Date.now();
         pausedTime = 0; // Reset paused time
         updateTimer();
@@ -489,7 +608,7 @@
             return; // Don't execute if script is stopped
         }
 
-        console.log('Cursor Auto Resume: clickResumeLink executed.');
+        scriptLog('Cursor Auto Resume: clickResumeLink executed.');
         updateIndicator('Checking...');
 
         let now = Date.now(); // Declare now at the very beginning of the function
@@ -498,15 +617,16 @@
         if (isGenerating) {
             const elapsed = now - startTime;
             if (elapsed > maxDuration) {
-                console.log('Cursor Auto Resume: Maximum duration elapsed, stopping auto-click');
+                scriptLog('Cursor Auto Resume: Maximum duration elapsed, stopping auto-click');
                 stopScript(); // Use stopScript instead of just clearing interval
-                return;
+            return;
             }
         }
 
         // Prevent clicking too frequently (3 second cooldown)
         if (now - lastClickTime < 3000) {
-            console.log('Cursor Auto Resume: Cooldown active, skipping click.');
+            scriptLog('Cursor Auto Resume: Cooldown active, skipping click.');
+            updateIndicator(`Cooldown: ${3000 / 1000}s`);
             return;
         }
 
@@ -519,13 +639,13 @@
 
         // Apply the cooldown logic
         if (now - lastInteractionTime < appliedDelay) {
-            console.log(`Cursor Auto Resume: Cooldown active (${appliedDelay / 1000}s), skipping click.`);
+            scriptLog(`Cursor Auto Resume: Cooldown active (${appliedDelay / 1000}s), skipping click.`);
             updateIndicator(`Cooldown: ${appliedDelay / 1000}s`);
             return;
         }
 
         // Proceed to check for elements if not in cooldown
-        console.log('Cursor Auto Resume: clickResumeLink executed.');
+        scriptLog('Cursor Auto Resume: clickResumeLink executed.');
         updateIndicator('Checking...');
 
         let errorHandledInThisCycle = false;
@@ -544,7 +664,7 @@
             const el = textNode; // Now el is the section element itself
 
             if (!el || !el.textContent) {
-                console.log('Cursor Auto Resume: Tool limit text node or parent missing.');
+                scriptLog('Cursor Auto Resume: Tool limit text node or parent missing.');
                 continue;
             }
 
@@ -561,7 +681,7 @@
                 let linkFound = false;
                 for (const link of links) {
                     if (link.textContent.trim() === 'resume the conversation') {
-                        console.log('Cursor Auto Resume: Clicking "resume the conversation" link.');
+                        scriptLog('Cursor Auto Resume: Clicking "resume the conversation" link.');
                         updateIndicator('Clicking "resume the conversation"');
                         link.click();
                         lastInteractionTime = now;
@@ -571,13 +691,13 @@
                         currentErrorRetryCount = 0;
                         // Successfully found and clicked a link, reset cooldown and error state
                         lastClickTime = now;
-                        console.log(scenario.logMessage);
+                        scriptLog(scenario.logMessage);
                         updateIndicator(scenario.logMessage);
                         return; // Stop after successful click
                     }
                 }
                 if (!linkFound) {
-                    console.log('Cursor Auto Resume: "resume the conversation" link not found in tool limit context.');
+                    scriptLog('Cursor Auto Resume: "resume the conversation" link not found in tool limit context.');
                     updateIndicator('Link not found (tool limit)');
                 }
             }
@@ -610,7 +730,7 @@
                 }
 
                 if (hasErrorText) {
-                    console.log(`Cursor Auto Resume: Detected error: "${scenario.errorText}" in popup.`);
+                    scriptLog(`Cursor Auto Resume: Detected error: "${scenario.errorText}" in popup.`);
                     updateIndicator(`Detected: "${scenario.errorText.substring(0, 20)}..."`);
 
                     // Handle error retry logic
@@ -625,7 +745,7 @@
                     const appliedDelay = retryDelays[delayIndex];
 
                     if (now - lastInteractionTime < appliedDelay) {
-                        console.log(`Cursor Auto Resume: Cooldown active for persistent error (${appliedDelay / 1000}s), skipping click.`);
+                        scriptLog(`Cursor Auto Resume: Cooldown active for persistent error (${appliedDelay / 1000}s), skipping click.`);
                         updateIndicator(`Cooldown: ${appliedDelay / 1000}s`);
                         errorHandledInThisCycle = true;
                         return;
@@ -681,19 +801,19 @@
                         }
                     }
 
-                    if (button) {
-                        console.log(scenario.logMessage);
+                if (button) {
+                    scriptLog(scenario.logMessage);
                         updateIndicator(`Clicking: "${scenario.buttonText}"`);
-                        button.click();
+                    button.click();
                         lastInteractionTime = now;
                         errorHandledInThisCycle = true;
                         // Reset error state if a button for this error was successfully clicked
                         lastDetectedErrorText = null;
                         currentErrorRetryCount = 0;
-                        return; // Exit after successful click
+                    return; // Exit after successful click
                     } else {
-                        console.log(`Cursor Auto Resume: Button "${scenario.buttonText}" not found for error: "${scenario.errorText}" in popup.`);
-                        console.log('Cursor Auto Resume: Available buttons in popup:', Array.from(popup.querySelectorAll('button, [role="button"], .anysphere-secondary-button, .anysphere-primary-button')).map(b => b.textContent.trim()));
+                        scriptLog(`Cursor Auto Resume: Button "${scenario.buttonText}" not found for error: "${scenario.errorText}" in popup.`);
+                        scriptLog('Cursor Auto Resume: Available buttons in popup:', Array.from(popup.querySelectorAll('button, [role="button"], .anysphere-secondary-button, .anysphere-primary-button')).map(b => b.textContent.trim()));
                         updateIndicator(`Button not found for: "${scenario.errorText.substring(0, 20)}..."`);
                         // Update lastInteractionTime even if button not found, to apply backoff for persistent error
                         lastInteractionTime = now;
@@ -715,6 +835,6 @@
     startScript();
 
     // Log timer info
-    console.log('Cursor Auto Resume: Will stop after 30 minutes. Call click_reset() to reset timer.');
+    scriptLog('Cursor Auto Resume: Will stop after 30 minutes. Call click_reset() to reset timer.');
 
 })();
