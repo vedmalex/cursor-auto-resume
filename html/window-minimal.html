@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cursor AI Chat - Minimal Test Structure</title>
+    <style>
+      /* Minimal styles for testing */
+      .generating {
+        color: #007acc;
+      }
+
+      .full-input-box-generating {
+        background-color: #f0f8ff;
+      }
+
+      .error {
+        color: #ff0000;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .button {
+        padding: 8px 12px;
+        margin: 4px;
+        cursor: pointer;
+      }
+
+      .dropdown {
+        position: relative;
+        display: inline-block;
+      }
+
+      .chat-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .message {
+        margin: 10px 0;
+        padding: 10px;
+        border: 1px solid #ddd;
+      }
+
+      .input-area {
+        width: 100%;
+        min-height: 100px;
+        padding: 10px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Main AI Chat Container -->
+    <div id="workbench.panel.aichat.86891061-2048-496c-80bb-25d100b145e0" class="composite auxiliarybar">
+      <div class="chat-container">
+
+        <!-- Chat Header -->
+        <div class="pane-header">
+          <h2>Chat</h2>
+          <div class="actions-container">
+            <button class="action-label codicon codicon-add-two button" aria-label="New Chat">New Chat</button>
+            <button class="action-label codicon codicon-history-two button"
+              aria-label="Show Chat History">History</button>
+          </div>
+        </div>
+
+        <!-- Model/Agent Selector Dropdown -->
+        <div class="monaco-dropdown">
+          <div class="dropdown-label">
+            <select id="model-selector">
+              <option value="gpt-4">GPT-4</option>
+              <option value="claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+              <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Mode Selector -->
+        <div class="mode-selector">
+          <button class="mode-btn" data-mode="Agent">Agent</button>
+          <button class="mode-btn" data-mode="Ask">Ask</button>
+          <button class="mode-btn" data-mode="Manual">Manual</button>
+          <button class="mode-btn" data-mode="UNIVERSAL">UNIVERSAL</button>
+          <button class="mode-btn" data-mode="STEADILY">STEADILY</button>
+        </div>
+
+        <!-- Chat Messages Area -->
+        <div class="chat-messages">
+
+          <!-- User Message -->
+          <div class="message user-message" data-message-index="1">
+            <div class="composer-human-message">
+              <p>Test message from user</p>
+            </div>
+          </div>
+
+          <!-- AI Response with Generation Status -->
+          <div class="message ai-message" data-message-index="2">
+            <!-- Generation Status Indicators (key elements for cursor-auto-resume.js) -->
+            <div class="generation-status">
+              <span class="generating-text">Generating...</span>
+              <div class="generating-indicator"></div>
+              <div class="full-input-box-generating"></div>
+            </div>
+
+            <!-- AI Response Content -->
+            <div class="ai-response">
+              <p>AI response content here...</p>
+            </div>
+          </div>
+
+          <!-- Error Message (for testing error detection) -->
+          <div class="message error-message hidden" data-message-index="3">
+            <div class="error-content">
+              <span class="error-text">Error occurred during generation</span>
+              <button class="resume-button button">Resume</button>
+              <button class="retry-button button">Retry</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-container">
+          <!-- Main Chat Input -->
+          <div class="chat-input-wrapper">
+            <textarea class="inputarea monaco-mouse-cursor-text chat-input" placeholder="Ask AI anything..."
+              rows="3"></textarea>
+          </div>
+
+          <!-- Input Controls -->
+          <div class="input-controls">
+            <button class="send-button button">Send</button>
+            <button class="stop-button button hidden">Stop</button>
+            <button class="clear-button button">Clear</button>
+          </div>
+
+          <!-- Context Pills/Files -->
+          <div class="context-pills">
+            <div class="context-pill" data-test-context-pill-key="current-context.md">
+              <span>current-context.md</span>
+              <button class="remove-pill">×</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status Indicators -->
+        <div class="status-indicators">
+          <div class="connection-status">Connected</div>
+          <div class="generation-progress hidden">
+            <span>Generating response...</span>
+            <div class="progress-bar"></div>
+          </div>
+        </div>
+
+        <!-- Warning/Notification Area -->
+        <div class="notification-area">
+          <div class="warning-message hidden">
+            <span class="warning-text">Warning: Connection unstable</span>
+            <button class="dismiss-warning">×</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Test Script Integration Point -->
+    <script>
+      // Minimal DOM manipulation for testing different states
+      window.testHelpers = {
+        // Simulate generating state
+        setGenerating: function (isGenerating) {
+          const generatingText = document.querySelector('.generating-text');
+          const generatingIndicator = document.querySelector('.generating-indicator');
+          const stopButton = document.querySelector('.stop-button');
+          const sendButton = document.querySelector('.send-button');
+
+          if (isGenerating) {
+            generatingText.textContent = 'Generating...';
+            generatingIndicator.classList.add('generating');
+            stopButton.classList.remove('hidden');
+            sendButton.classList.add('hidden');
+          } else {
+            generatingText.textContent = '';
+            generatingIndicator.classList.remove('generating');
+            stopButton.classList.add('hidden');
+            sendButton.classList.remove('hidden');
+          }
+        },
+
+        // Simulate error state
+        setError: function (hasError, errorMessage = 'Error occurred') {
+          const errorMsg = document.querySelector('.error-message');
+          const errorText = document.querySelector('.error-text');
+
+          if (hasError) {
+            errorMsg.classList.remove('hidden');
+            errorText.textContent = errorMessage;
+          } else {
+            errorMsg.classList.add('hidden');
+          }
+        },
+
+        // Simulate different modes
+        setMode: function (mode) {
+          document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.classList.remove('active');
+          });
+          document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+        },
+
+        // Simulate model selection
+        setModel: function (model) {
+          document.getElementById('model-selector').value = model;
+        }
+      };
+
+      // Auto-load cursor-auto-resume.js for testing if available
+      if (typeof window.cursorAutoResumeScript === 'undefined') {
+        console.log('cursor-auto-resume.js not loaded - this is expected in test environment');
+      }
+    </script>
+  </body>
+
+</html>

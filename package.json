@@ -2,9 +2,18 @@
   "name": "cursor-auto-resume",
   "private": true,
   "devDependencies": {
-    "@types/bun": "latest"
+    "@happy-dom/global-registrator": "^18.0.1",
+    "@types/bun": "latest",
+    "jsdom": "^26.1.0"
   },
   "peerDependencies": {
     "typescript": "^5"
-  }
+  },
+  "dependencies": {},
+  "scripts": {
+    "test": "bun test",
+    "test:unit": "bun test tests/unit-tests.test.js",
+    "test:integration": "bun test tests/integration-tests.test.js"
+  },
+  "keywords": []
 }
